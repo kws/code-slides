@@ -1,18 +1,16 @@
 class NavigationManager {
     constructor() {
-        this.slides = [];
-        this.currentSlideIndex = 0;
         this.slideList = document.getElementById('slide-list');
         this.notesParagraph = document.getElementById('slide-notes');
         this.nextSlidePreview = document.getElementById('next-slide-preview');
         this.timerElement = document.getElementById('timer');
         this.startTime = null;
         this.timerInterval = null;
+        this.currentState = null;
     }
 
-    async loadSlides() {
-        const response = await fetch('/api/slides');
-        this.slides = await response.json();
+    updateState(newState) {
+        this.currentState = newState;
         this.renderSlideList();
         this.updateNotes();
         this.updateNextSlidePreview();
@@ -20,26 +18,34 @@ class NavigationManager {
 
     renderSlideList() {
         this.slideList.innerHTML = '';
-        this.slides.forEach((slide, index) => {
+        this.currentState.slides.forEach((slide, index) => {
             const li = document.createElement('li');
-            li.textContent = `Slide ${slide.id}`;
+            li.textContent = `Slide ${slide.id}: ${slide.type}`;
             li.addEventListener('click', () => this.navigateToSlide(index));
-            if (index === this.currentSlideIndex) {
+            if (index === this.currentState.currentSlideIndex) {
                 li.classList.add('active');
             }
             this.slideList.appendChild(li);
         });
+        this.scrollToActiveSlide();
+    }
+
+    scrollToActiveSlide() {
+        const activeSlide = this.slideList.querySelector('.active');
+        if (activeSlide) {
+            activeSlide.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     }
 
     updateNotes() {
-        const currentSlide = this.slides[this.currentSlideIndex];
+        const currentSlide = this.currentState.slides[this.currentState.currentSlideIndex];
         this.notesParagraph.textContent = currentSlide.notes;
     }
 
     updateNextSlidePreview() {
-        if (this.currentSlideIndex < this.slides.length - 1) {
-            const nextSlide = this.slides[this.currentSlideIndex + 1];
-            this.nextSlidePreview.textContent = `Next: Slide ${nextSlide.id} - ${nextSlide.notes}`;
+        if (this.currentState.currentSlideIndex < this.currentState.slides.length - 1) {
+            const nextSlide = this.currentState.slides[this.currentState.currentSlideIndex + 1];
+            this.nextSlidePreview.textContent = `Next: Slide ${nextSlide.id} - ${nextSlide.type} - ${nextSlide.notes}`;
         } else {
             this.nextSlidePreview.textContent = 'End of presentation';
         }
@@ -47,38 +53,17 @@ class NavigationManager {
 
     navigateToSlide(index) {
         console.log(`Navigating to slide ${index}`);
-        this.currentSlideIndex = index;
-        this.renderSlideList();
-        this.updateNotes();
-        this.updateNextSlidePreview();
-        this.sendNavigationMessage();
+        socket.emit('navigate', { slideIndex: index });
     }
 
     nextSlide() {
         console.log('Next slide clicked');
-        if (this.currentSlideIndex < this.slides.length - 1) {
-            this.currentSlideIndex++;
-            this.renderSlideList();
-            this.updateNotes();
-            this.updateNextSlidePreview();
-            this.sendNavigationMessage();
-        }
+        this.navigateToSlide(this.currentState.currentSlideIndex + 1);
     }
 
     previousSlide() {
         console.log('Previous slide clicked');
-        if (this.currentSlideIndex > 0) {
-            this.currentSlideIndex--;
-            this.renderSlideList();
-            this.updateNotes();
-            this.updateNextSlidePreview();
-            this.sendNavigationMessage();
-        }
-    }
-
-    sendNavigationMessage() {
-        console.log('Sending navigation message');
-        socket.emit('navigate', { slideIndex: this.currentSlideIndex });
+        this.navigateToSlide(this.currentState.currentSlideIndex - 1);
     }
 
     startTimer() {
@@ -114,16 +99,12 @@ class NavigationManager {
 const navigationManager = new NavigationManager();
 const socket = io();
 
-async function syncWithServer() {
-    const response = await fetch('/api/current_slide');
-    const data = await response.json();
-    navigationManager.navigateToSlide(data.currentSlideIndex);
+function requestCurrentState() {
+    socket.emit('request_sync');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    navigationManager.loadSlides().then(() => {
-        syncWithServer();
-    });
+    requestCurrentState();
 
     document.getElementById('prev-button').addEventListener('click', () => navigationManager.previousSlide());
     document.getElementById('next-button').addEventListener('click', () => navigationManager.nextSlide());
@@ -154,4 +135,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 socket.on('connect', () => {
     console.log('Connected to server');
+    requestCurrentState();
+});
+
+socket.on('state_update', (newState) => {
+    console.log('Received state update:', newState);
+    navigationManager.updateState(newState);
 });

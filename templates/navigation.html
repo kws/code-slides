@@ -11,60 +11,101 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            padding: 20px;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        .navigation-section {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .slide-list-container {
+            flex: 0 0 40%;
+            margin-right: 20px;
         }
         #slide-list {
-            flex: 1;
+            height: 300px;
             overflow-y: auto;
             list-style-type: none;
             padding: 0;
-            max-height: 200px; /* Limit the height */
+            margin: 0;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
         }
         #slide-list li {
-            padding: 10px;
+            padding: 10px 15px;
             cursor: pointer;
             border-bottom: 1px solid #dee2e6;
+            transition: background-color 0.3s ease;
+        }
+        #slide-list li:last-child {
+            border-bottom: none;
         }
         #slide-list li.active {
             background-color: #007bff;
             color: white;
+            font-weight: bold;
         }
-        #slide-notes {
+        #slide-list li:hover:not(.active) {
+            background-color: #f8f9fa;
+        }
+        .notes-preview-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        #slide-notes, #next-slide-preview {
             flex: 1;
             overflow-y: auto;
-            padding: 10px;
+            padding: 15px;
             background-color: #f8f9fa;
-            border-top: 1px solid #dee2e6;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            margin-bottom: 10px;
         }
         .navigation-buttons {
             display: flex;
             justify-content: space-between;
-            padding: 10px;
+            padding: 10px 0;
         }
         #timer {
             font-size: 24px;
             text-align: center;
             margin: 10px 0;
+            font-weight: bold;
         }
-        #next-slide-preview {
-            border: 1px solid #dee2e6;
-            padding: 10px;
-            margin-top: 10px;
+        h2, h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .button {
+            padding: 8px 16px;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Slide Navigation</h2>
+        <h2>Presentation Navigation</h2>
         <div id="timer">00:00:00</div>
-        <ul id="slide-list"></ul>
+        <div class="navigation-section">
+            <div class="slide-list-container">
+                <h3>Slide List</h3>
+                <ul id="slide-list"></ul>
+            </div>
+            <div class="notes-preview-container">
+                <h3>Current Slide Notes</h3>
+                <div id="slide-notes"></div>
+                <h3>Next Slide Preview</h3>
+                <div id="next-slide-preview"></div>
+            </div>
+        </div>
         <div class="navigation-buttons">
             <button id="prev-button" class="button">Previous</button>
             <button id="next-button" class="button">Next</button>
         </div>
-        <h3>Current Slide Notes</h3>
-        <p id="slide-notes"></p>
-        <h3>Next Slide Preview</h3>
-        <div id="next-slide-preview"></div>
     </div>
     <script src="{{ url_for('static', filename='js/navigation.js') }}"></script>
 </body>

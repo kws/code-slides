@@ -86,93 +86,70 @@ class ApiCallSlide extends Slide {
 
 class PresentationManager {
     constructor() {
-        this.slides = [];
-        this.currentSlideIndex = 0;
         this.slideContainer = document.getElementById('slide-container');
+        this.currentState = null;
     }
 
-    async loadSlides() {
-        console.log('Loading slides');
-        const response = await fetch('/api/slides');
-        const slidesData = await response.json();
-        console.log('Slides data:', slidesData);
-        this.slides = slidesData.map(slideData => {
-            console.log(`Creating slide of type: ${slideData.type}`);
-            switch (slideData.type) {
-                case 'image':
-                    return new ImageSlide(slideData);
-                case 'simulation':
-                    return new SimulationSlide(slideData);
-                case 'api_call':
-                    return new ApiCallSlide(slideData);
-                default:
-                    console.error(`Unknown slide type: ${slideData.type}`);
-                    throw new Error(`Unknown slide type: ${slideData.type}`);
-            }
-        });
+    updateState(newState) {
+        this.currentState = newState;
         this.renderCurrentSlide();
     }
 
     renderCurrentSlide() {
-        if (this.slides.length === 0) {
+        if (!this.currentState || this.currentState.slides.length === 0) {
             console.log('No slides to render');
             return;
         }
-        const currentSlide = this.slides[this.currentSlideIndex];
-        console.log(`Rendering slide ${this.currentSlideIndex} of type ${currentSlide.type}`);
+        const currentSlide = this.currentState.slides[this.currentState.currentSlideIndex];
+        console.log(`Rendering slide ${this.currentState.currentSlideIndex} of type ${currentSlide.type}`);
         this.slideContainer.innerHTML = '';
-        this.slideContainer.appendChild(currentSlide.render());
-        console.log(`Rendered slide ${this.currentSlideIndex}`);
+        let slideInstance;
+        switch (currentSlide.type) {
+            case 'image':
+                slideInstance = new ImageSlide(currentSlide);
+                break;
+            case 'simulation':
+                slideInstance = new SimulationSlide(currentSlide);
+                break;
+            case 'api_call':
+                slideInstance = new ApiCallSlide(currentSlide);
+                break;
+            default:
+                console.error(`Unknown slide type: ${currentSlide.type}`);
+                return;
+        }
+        this.slideContainer.appendChild(slideInstance.render());
+        console.log(`Rendered slide ${this.currentState.currentSlideIndex}`);
     }
 
     nextSlide() {
-        if (this.currentSlideIndex < this.slides.length - 1) {
-            this.currentSlideIndex++;
-            this.renderCurrentSlide();
-        }
+        socket.emit('navigate', { slideIndex: this.currentState.currentSlideIndex + 1 });
     }
 
     previousSlide() {
-        if (this.currentSlideIndex > 0) {
-            this.currentSlideIndex--;
-            this.renderCurrentSlide();
-        }
-    }
-
-    navigateToSlide(index) {
-        console.log(`Navigating to slide ${index}`);
-        if (index >= 0 && index < this.slides.length) {
-            this.currentSlideIndex = index;
-            this.renderCurrentSlide();
-        }
+        socket.emit('navigate', { slideIndex: this.currentState.currentSlideIndex - 1 });
     }
 }
 
 const presentationManager = new PresentationManager();
 const socket = io();
 
-async function syncWithServer() {
-    const response = await fetch('/api/current_slide');
-    const data = await response.json();
-    presentationManager.navigateToSlide(data.currentSlideIndex);
+function requestCurrentState() {
+    socket.emit('request_sync');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM content loaded, initializing presentation');
-    presentationManager.loadSlides().then(() => {
-        syncWithServer();
-    });
+    requestCurrentState();
 
     document.addEventListener('keydown', (event) => {
         switch (event.key) {
             case 'ArrowRight':
             case ' ':
                 presentationManager.nextSlide();
-                socket.emit('navigate', { slideIndex: presentationManager.currentSlideIndex });
                 break;
             case 'ArrowLeft':
                 presentationManager.previousSlide();
-                socket.emit('navigate', { slideIndex: presentationManager.currentSlideIndex });
                 break;
         }
     });
@@ -180,9 +157,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 socket.on('connect', () => {
     console.log('Connected to server');
+    requestCurrentState();
 });
 
-socket.on('navigate', (data) => {
-    console.log(`Received navigation message: ${JSON.stringify(data)}`);
-    presentationManager.navigateToSlide(data.slideIndex);
+socket.on('state_update', (newState) => {
+    console.log('Received state update:', newState);
+    presentationManager.updateState(newState);
 });
