@@ -9,7 +9,8 @@ socketio = SocketIO(app)
 slides = [
     {"id": 1, "type": "image", "content": "https://via.placeholder.com/800x600.png?text=Slide+1", "notes": "This is slide 1"},
     {"id": 2, "type": "image", "content": "https://via.placeholder.com/800x600.png?text=Slide+2", "notes": "This is slide 2"},
-    {"id": 3, "type": "image", "content": "https://via.placeholder.com/800x600.png?text=Slide+3", "notes": "This is slide 3"},
+    {"id": 3, "type": "simulation", "content": "{ \"type\": \"basic_simulation\", \"data\": { \"initialValue\": 10, \"increment\": 2 } }", "notes": "This is a simulation slide"},
+    {"id": 4, "type": "api_call", "content": "https://api.github.com/users/github", "notes": "This is an API call slide"},
 ]
 
 @app.route('/')
@@ -38,9 +39,11 @@ def get_slide(slide_id):
 @app.route('/api/slide', methods=['POST'])
 def create_slide():
     new_slide = request.json
-    new_slide['id'] = max(slide['id'] for slide in slides) + 1
-    slides.append(new_slide)
-    return jsonify(new_slide), 201
+    if new_slide:
+        new_slide['id'] = max(slide['id'] for slide in slides) + 1
+        slides.append(new_slide)
+        return jsonify(new_slide), 201
+    return jsonify({"error": "Invalid slide data"}), 400
 
 @socketio.on('connect')
 def handle_connect():
@@ -48,7 +51,7 @@ def handle_connect():
 
 @socketio.on('navigate')
 def handle_navigation(data):
-    emit('navigate', data, broadcast=True, include_sender=False)
+    emit('navigate', data, broadcast=True)
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
