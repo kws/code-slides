@@ -38,18 +38,31 @@
             justify-content: space-between;
             padding: 10px;
         }
+        #timer {
+            font-size: 24px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        #next-slide-preview {
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>Slide Navigation</h2>
+        <div id="timer">00:00:00</div>
         <ul id="slide-list"></ul>
         <div class="navigation-buttons">
             <button id="prev-button" class="button">Previous</button>
             <button id="next-button" class="button">Next</button>
         </div>
-        <h3>Slide Notes</h3>
+        <h3>Current Slide Notes</h3>
         <p id="slide-notes"></p>
+        <h3>Next Slide Preview</h3>
+        <div id="next-slide-preview"></div>
     </div>
     <script src="{{ url_for('static', filename='js/navigation.js') }}"></script>
 </body>
