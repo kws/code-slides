@@ -114,8 +114,16 @@ class NavigationManager {
 const navigationManager = new NavigationManager();
 const socket = io();
 
+async function syncWithServer() {
+    const response = await fetch('/api/current_slide');
+    const data = await response.json();
+    navigationManager.navigateToSlide(data.currentSlideIndex);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    navigationManager.loadSlides();
+    navigationManager.loadSlides().then(() => {
+        syncWithServer();
+    });
 
     document.getElementById('prev-button').addEventListener('click', () => navigationManager.previousSlide());
     document.getElementById('next-button').addEventListener('click', () => navigationManager.nextSlide());

@@ -14,6 +14,9 @@ slides = [
     {"id": 4, "type": "api_call", "content": "https://api.github.com/users/github", "notes": "This is an API call slide"},
 ]
 
+# Server-side state management
+current_slide_index = 0
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -49,8 +52,8 @@ def create_slide():
 @app.route('/api/presentation', methods=['POST'])
 def save_current_presentation():
     data = request.json
-    name = data.get('name')
-    if name:
+    if data and 'name' in data:
+        name = data['name']
         save_presentation(name, slides)
         return jsonify({"message": f"Presentation '{name}' saved successfully"}), 200
     return jsonify({"error": "Invalid presentation name"}), 400
@@ -68,13 +71,25 @@ def load_saved_presentation(name):
 def get_presentation_list():
     return jsonify(get_presentation_names())
 
+@app.route('/api/current_slide')
+def get_current_slide():
+    return jsonify({"currentSlideIndex": current_slide_index})
+
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
+    # Send the current slide index to the newly connected client
+    emit('sync', {'slideIndex': current_slide_index})
 
 @socketio.on('navigate')
 def handle_navigation(data):
+    global current_slide_index
+    current_slide_index = data['slideIndex']
     emit('navigate', data, broadcast=True)
 
+@socketio.on('request_sync')
+def handle_sync_request():
+    emit('sync', {'slideIndex': current_slide_index})
+
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=True, log_output=True)

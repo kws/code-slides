@@ -151,18 +151,28 @@ class PresentationManager {
 const presentationManager = new PresentationManager();
 const socket = io();
 
+async function syncWithServer() {
+    const response = await fetch('/api/current_slide');
+    const data = await response.json();
+    presentationManager.navigateToSlide(data.currentSlideIndex);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM content loaded, initializing presentation');
-    presentationManager.loadSlides();
+    presentationManager.loadSlides().then(() => {
+        syncWithServer();
+    });
 
     document.addEventListener('keydown', (event) => {
         switch (event.key) {
             case 'ArrowRight':
             case ' ':
                 presentationManager.nextSlide();
+                socket.emit('navigate', { slideIndex: presentationManager.currentSlideIndex });
                 break;
             case 'ArrowLeft':
                 presentationManager.previousSlide();
+                socket.emit('navigate', { slideIndex: presentationManager.currentSlideIndex });
                 break;
         }
     });
