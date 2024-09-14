@@ -15,24 +15,29 @@ class Slide {
 
 class ImageSlide extends Slide {
     render() {
+        const slide = document.createElement('div');
+        slide.className = 'slide';
         const img = document.createElement('img');
         img.src = this.content;
         img.alt = `Slide ${this.id}`;
-        return img;
+        slide.appendChild(img);
+        return slide;
     }
 }
 
 class SimulationSlide extends Slide {
     render() {
         console.log(`Rendering SimulationSlide ${this.id}`);
+        const slide = document.createElement('div');
+        slide.className = 'slide';
         const container = document.createElement('div');
         container.id = `simulation-${this.id}`;
         container.innerHTML = `<h2>Simulation</h2><div id="simulation-content-${this.id}"></div>`;
+        slide.appendChild(container);
         
-        // We'll load the simulation content after the slide is rendered
         setTimeout(() => this.loadSimulation(), 100);
         
-        return container;
+        return slide;
     }
 
     loadSimulation() {
@@ -42,10 +47,8 @@ class SimulationSlide extends Slide {
             console.error(`Simulation container for slide ${this.id} not found`);
             return;
         }
-        // Here we would typically load and start the simulation
-        // For this example, we'll just add some placeholder content
         simContainer.innerHTML = `<p>Simulation content for slide ${this.id}</p>`;
-        simContainer.style.color = 'white'; // Ensure text is visible on black background
+        simContainer.style.color = 'white';
         console.log(`Simulation for slide ${this.id} loaded`);
     }
 }
@@ -53,14 +56,16 @@ class SimulationSlide extends Slide {
 class ApiCallSlide extends Slide {
     render() {
         console.log(`Rendering ApiCallSlide ${this.id}`);
+        const slide = document.createElement('div');
+        slide.className = 'slide';
         const container = document.createElement('div');
         container.id = `api-call-${this.id}`;
         container.innerHTML = `<h2>API Call Result</h2><div id="api-result-${this.id}">Loading...</div>`;
+        slide.appendChild(container);
         
-        // Make the API call after the slide is rendered
         setTimeout(() => this.makeApiCall(), 100);
         
-        return container;
+        return slide;
     }
 
     async makeApiCall() {
@@ -74,12 +79,12 @@ class ApiCallSlide extends Slide {
             const response = await fetch(this.content);
             const data = await response.json();
             resultContainer.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
-            resultContainer.style.color = 'white'; // Ensure text is visible on black background
+            resultContainer.style.color = 'white';
             console.log(`API call for slide ${this.id} completed successfully`);
         } catch (error) {
             console.error(`Error in API call for slide ${this.id}:`, error);
             resultContainer.innerHTML = `<p>Error: ${error.message}</p>`;
-            resultContainer.style.color = 'red'; // Make error message visible
+            resultContainer.style.color = 'red';
         }
     }
 }
@@ -88,45 +93,78 @@ class PresentationManager {
     constructor() {
         this.slideContainer = document.getElementById('slide-container');
         this.currentState = null;
+        this.renderedSlides = [];
     }
 
     updateState(newState) {
         this.currentState = newState;
-        this.renderCurrentSlide();
+        this.renderSlides();
     }
 
-    renderCurrentSlide() {
+    renderSlides() {
         if (!this.currentState || this.currentState.slides.length === 0) {
             console.log('No slides to render');
             return;
         }
-        const currentSlide = this.currentState.slides[this.currentState.currentSlideIndex];
-        console.log(`Rendering slide ${this.currentState.currentSlideIndex} of type ${currentSlide.type}`);
+
         this.slideContainer.innerHTML = '';
-        let slideInstance;
-        switch (currentSlide.type) {
-            case 'image':
-                slideInstance = new ImageSlide(currentSlide);
-                break;
-            case 'simulation':
-                slideInstance = new SimulationSlide(currentSlide);
-                break;
-            case 'api_call':
-                slideInstance = new ApiCallSlide(currentSlide);
-                break;
-            default:
-                console.error(`Unknown slide type: ${currentSlide.type}`);
-                return;
-        }
-        this.slideContainer.appendChild(slideInstance.render());
-        console.log(`Rendered slide ${this.currentState.currentSlideIndex}`);
+        this.renderedSlides = [];
+
+        this.currentState.slides.forEach((slideData, index) => {
+            let slideInstance;
+            switch (slideData.type) {
+                case 'image':
+                    slideInstance = new ImageSlide(slideData);
+                    break;
+                case 'simulation':
+                    slideInstance = new SimulationSlide(slideData);
+                    break;
+                case 'api_call':
+                    slideInstance = new ApiCallSlide(slideData);
+                    break;
+                default:
+                    console.error(`Unknown slide type: ${slideData.type}`);
+                    return;
+            }
+            const slideElement = slideInstance.render();
+            this.slideContainer.appendChild(slideElement);
+            this.renderedSlides.push(slideElement);
+        });
+
+        this.showCurrentSlide();
+    }
+
+    showCurrentSlide() {
+        console.log('Showing current slide');
+        const currentIndex = this.currentState.currentSlideIndex;
+        this.renderedSlides.forEach((slide, index) => {
+            if (index === currentIndex) {
+                setTimeout(() => {
+                    console.log(`Adding 'active' class to slide ${index}`);
+                    slide.classList.add('active');
+                    slide.classList.remove('previous');
+                }, 50);
+            } else if (index === currentIndex - 1) {
+                setTimeout(() => {
+                    console.log(`Adding 'previous' class to slide ${index}`);
+                    slide.classList.add('previous');
+                    slide.classList.remove('active');
+                }, 50);
+            } else {
+                console.log(`Removing all classes from slide ${index}`);
+                slide.classList.remove('active', 'previous');
+            }
+        });
+        console.log(`Showing slide ${currentIndex}`);
     }
 
     nextSlide() {
+        console.log('Next slide requested');
         socket.emit('navigate', { slideIndex: this.currentState.currentSlideIndex + 1 });
     }
 
     previousSlide() {
+        console.log('Previous slide requested');
         socket.emit('navigate', { slideIndex: this.currentState.currentSlideIndex - 1 });
     }
 }
@@ -135,6 +173,7 @@ const presentationManager = new PresentationManager();
 const socket = io();
 
 function requestCurrentState() {
+    console.log('Requesting current state');
     socket.emit('request_sync');
 }
 
