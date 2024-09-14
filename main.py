@@ -2,6 +2,7 @@ from flask import Flask, render_template, jsonify, request
 from flask_socketio import SocketIO, emit
 import json
 from presentation_storage import save_presentation, load_presentation, get_presentation_names
+import time
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -11,6 +12,8 @@ class PresentationState:
         self.current_slide_index = 0
         self.slides = []
         self.connected_clients = set()
+        self.timer_start = None
+        self.timer_elapsed = 0
 
     def set_slides(self, slides):
         self.slides = slides
@@ -34,8 +37,27 @@ class PresentationState:
     def get_current_state(self):
         return {
             'currentSlideIndex': self.current_slide_index,
-            'slides': self.slides
+            'slides': self.slides,
+            'timerElapsed': self.get_timer_elapsed()
         }
+
+    def start_timer(self):
+        if self.timer_start is None:
+            self.timer_start = time.time()
+
+    def stop_timer(self):
+        if self.timer_start is not None:
+            self.timer_elapsed += time.time() - self.timer_start
+            self.timer_start = None
+
+    def reset_timer(self):
+        self.timer_start = None
+        self.timer_elapsed = 0
+
+    def get_timer_elapsed(self):
+        if self.timer_start is None:
+            return self.timer_elapsed
+        return self.timer_elapsed + (time.time() - self.timer_start)
 
 presentation_state = PresentationState()
 
@@ -96,6 +118,28 @@ def get_presentation_list():
 @app.route('/api/current_state')
 def get_current_state():
     return jsonify(presentation_state.get_current_state())
+
+@app.route('/api/timer/start', methods=['POST'])
+def start_timer():
+    presentation_state.start_timer()
+    presentation_state.notify_clients()
+    return jsonify({"message": "Timer started"}), 200
+
+@app.route('/api/timer/stop', methods=['POST'])
+def stop_timer():
+    presentation_state.stop_timer()
+    presentation_state.notify_clients()
+    return jsonify({"message": "Timer stopped"}), 200
+
+@app.route('/api/timer/reset', methods=['POST'])
+def reset_timer():
+    presentation_state.reset_timer()
+    presentation_state.notify_clients()
+    return jsonify({"message": "Timer reset"}), 200
+
+@app.route('/api/timer')
+def get_timer():
+    return jsonify({"elapsed": presentation_state.get_timer_elapsed()}), 200
 
 @socketio.on('connect')
 def handle_connect():

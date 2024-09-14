@@ -4,7 +4,6 @@ class NavigationManager {
         this.notesParagraph = document.getElementById('slide-notes');
         this.nextSlidePreview = document.getElementById('next-slide-preview');
         this.timerElement = document.getElementById('timer');
-        this.startTime = null;
         this.timerInterval = null;
         this.currentState = null;
     }
@@ -14,6 +13,7 @@ class NavigationManager {
         this.renderSlideList();
         this.updateNotes();
         this.updateNextSlidePreview();
+        this.updateTimer(newState.timerElapsed);
     }
 
     renderSlideList() {
@@ -67,32 +67,40 @@ class NavigationManager {
     }
 
     startTimer() {
-        if (!this.startTime) {
-            this.startTime = new Date();
-            this.timerInterval = setInterval(() => this.updateTimer(), 1000);
-        }
+        fetch('/api/timer/start', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => console.log(data.message))
+            .catch(error => console.error('Error starting timer:', error));
     }
 
     stopTimer() {
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
-        }
+        fetch('/api/timer/stop', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => console.log(data.message))
+            .catch(error => console.error('Error stopping timer:', error));
     }
 
     resetTimer() {
-        this.stopTimer();
-        this.startTime = null;
-        this.timerElement.textContent = '00:00:00';
+        fetch('/api/timer/reset', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => console.log(data.message))
+            .catch(error => console.error('Error resetting timer:', error));
     }
 
-    updateTimer() {
-        const currentTime = new Date();
-        const elapsedTime = new Date(currentTime - this.startTime);
-        const hours = elapsedTime.getUTCHours().toString().padStart(2, '0');
-        const minutes = elapsedTime.getUTCMinutes().toString().padStart(2, '0');
-        const seconds = elapsedTime.getUTCSeconds().toString().padStart(2, '0');
+    updateTimer(elapsed) {
+        const hours = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+        const minutes = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+        const seconds = Math.floor(elapsed % 60).toString().padStart(2, '0');
         this.timerElement.textContent = `${hours}:${minutes}:${seconds}`;
+    }
+
+    startTimerUpdate() {
+        setInterval(() => {
+            fetch('/api/timer')
+                .then(response => response.json())
+                .then(data => this.updateTimer(data.elapsed))
+                .catch(error => console.error('Error updating timer:', error));
+        }, 1000);  // Update every second
     }
 }
 
@@ -131,6 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
     timerControls.appendChild(resetTimerButton);
 
     document.querySelector('.navigation-buttons').appendChild(timerControls);
+
+    navigationManager.startTimerUpdate();
 });
 
 socket.on('connect', () => {
