@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, request
 from flask_socketio import SocketIO, emit
 import json
+from presentation_storage import save_presentation, load_presentation, get_presentation_names
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -44,6 +45,28 @@ def create_slide():
         slides.append(new_slide)
         return jsonify(new_slide), 201
     return jsonify({"error": "Invalid slide data"}), 400
+
+@app.route('/api/presentation', methods=['POST'])
+def save_current_presentation():
+    data = request.json
+    name = data.get('name')
+    if name:
+        save_presentation(name, slides)
+        return jsonify({"message": f"Presentation '{name}' saved successfully"}), 200
+    return jsonify({"error": "Invalid presentation name"}), 400
+
+@app.route('/api/presentation/<name>')
+def load_saved_presentation(name):
+    loaded_slides = load_presentation(name)
+    if loaded_slides:
+        global slides
+        slides = loaded_slides
+        return jsonify({"message": f"Presentation '{name}' loaded successfully"}), 200
+    return jsonify({"error": "Presentation not found"}), 404
+
+@app.route('/api/presentations')
+def get_presentation_list():
+    return jsonify(get_presentation_names())
 
 @socketio.on('connect')
 def handle_connect():

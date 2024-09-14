@@ -12,6 +12,12 @@
         <p>Click the buttons below to open the presentation and navigation windows:</p>
         <a href="#" class="button" id="open-presentation">Open Presentation</a>
         <a href="#" class="button" id="open-navigation">Open Navigation</a>
+        
+        <h2>Save/Load Presentation</h2>
+        <input type="text" id="presentation-name" placeholder="Enter presentation name">
+        <button id="save-presentation" class="button">Save Presentation</button>
+        <button id="load-presentation" class="button">Load Presentation</button>
+        <select id="presentation-list"></select>
     </div>
 
     <script>
@@ -24,6 +30,53 @@
             e.preventDefault();
             window.open("{{ url_for('navigation') }}", "navigation", "width=400,height=600");
         });
+
+        document.getElementById('save-presentation').addEventListener('click', async () => {
+            const name = document.getElementById('presentation-name').value;
+            if (name) {
+                const response = await fetch('/api/presentation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name }),
+                });
+                const result = await response.json();
+                alert(result.message || result.error);
+                loadPresentationList();
+            } else {
+                alert('Please enter a presentation name');
+            }
+        });
+
+        document.getElementById('load-presentation').addEventListener('click', async () => {
+            const name = document.getElementById('presentation-list').value;
+            if (name) {
+                const response = await fetch(`/api/presentation/${name}`);
+                const result = await response.json();
+                alert(result.message || result.error);
+                if (result.message) {
+                    location.reload();
+                }
+            } else {
+                alert('Please select a presentation to load');
+            }
+        });
+
+        async function loadPresentationList() {
+            const response = await fetch('/api/presentations');
+            const presentations = await response.json();
+            const select = document.getElementById('presentation-list');
+            select.innerHTML = '';
+            presentations.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                select.appendChild(option);
+            });
+        }
+
+        loadPresentationList();
     </script>
 </body>
 </html>
