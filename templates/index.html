@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Presentation Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Custom Presentation Tool</h1>
+        <p>Click the buttons below to open the presentation and navigation windows:</p>
+        <a href="#" class="button" id="open-presentation">Open Presentation</a>
+        <a href="#" class="button" id="open-navigation">Open Navigation</a>
+    </div>
+
+    <script>
+        document.getElementById('open-presentation').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.open("{{ url_for('presentation') }}", "presentation", "width=800,height=600");
+        });
+
+        document.getElementById('open-navigation').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.open("{{ url_for('navigation') }}", "navigation", "width=400,height=600");
+        });
+    </script>
+</body>
+</html>

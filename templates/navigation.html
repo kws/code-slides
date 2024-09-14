@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navigation View</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #slide-list {
+            flex: 1;
+            overflow-y: auto;
+            list-style-type: none;
+            padding: 0;
+        }
+        #slide-list li {
+            padding: 10px;
+            cursor: pointer;
+        }
+        #slide-list li.active {
+            background-color: #007bff;
+            color: white;
+        }
+        #slide-notes {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Slide Navigation</h2>
+        <ul id="slide-list"></ul>
+        <div class="navigation-buttons">
+            <button id="prev-button" class="button">Previous</button>
+            <button id="next-button" class="button">Next</button>
+        </div>
+        <h3>Slide Notes</h3>
+        <p id="slide-notes"></p>
+    </div>
+    <script src="{{ url_for('static', filename='js/navigation.js') }}"></script>
+</body>
+</html>
