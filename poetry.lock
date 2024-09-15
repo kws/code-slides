@@ -252,6 +252,16 @@ wsproto = "*"
 docs = ["sphinx"]
 
 [[package]]
+name = "uuid"
+version = "1.30"
+description = "UUID object and generation functions (Python 2.3 or higher)"
+optional = false
+python-versions = "*"
+files = [
+    {file = "uuid-1.30.tar.gz", hash = "sha256:1f87cc004ac5120466f36c5beae48b4c48cc411968eed0eaecd3da82aa96193f"},
+]
+
+[[package]]
 name = "werkzeug"
 version = "3.0.4"
 description = "The comprehensive WSGI web application library."
@@ -285,4 +295,4 @@ h11 = ">=0.9.0,<1"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "495fc0ba6ae8246e41e59bf833da6a279977f6656831fc2fdd9d385cbd42b6a0"
+content-hash = "310e78e06a4f646b5befa570d6389f0f250c5ee8325b4c296a147e13a0ad4c23"

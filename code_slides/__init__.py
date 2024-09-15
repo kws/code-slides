@@ -1,3 +1,8 @@
-from .main import app, socketio
+from flask import Flask
+from flask_socketio import SocketIO
 
-__all__ = ['app', 'socketio']
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
+socketio = SocketIO(app)
+
+from . import main

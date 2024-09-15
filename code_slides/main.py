@@ -1,21 +1,70 @@
-from flask import Flask, render_template, jsonify, request
-from flask_socketio import SocketIO, emit
-import json
-from .presentation_storage import save_presentation, load_presentation, get_presentation_names
-import time
+from flask import render_template, request, jsonify, redirect, url_for
+from flask_socketio import emit
+import uuid
+from .presentation_storage import (
+    get_presentation, save_presentation, delete_presentation,
+    list_presentations, load_presentations
+)
+from . import app, socketio
 
-app = Flask(__name__)
-socketio = SocketIO(app)
+current_slide = 0
+timer_seconds = 0
 
-# ... (rest of the code remains the same)
+# Load presentations on startup
+presentations = load_presentations()
 
-if __name__ == '__main__':
-    # Initialize with default slides
-    default_slides = [
-        {"id": 1, "type": "image", "content": "https://via.placeholder.com/800x600.png?text=Slide+1", "notes": "This is slide 1", "transition": "fadeIn", "transitionDuration": "1s"},
-        {"id": 2, "type": "image", "content": "https://via.placeholder.com/800x600.png?text=Slide+2", "notes": "This is slide 2", "transition": "slideInRight", "transitionDuration": "0.8s"},
-        {"id": 3, "type": "simulation", "content": "{ \"type\": \"basic_simulation\", \"data\": { \"initialValue\": 10, \"increment\": 2 } }", "notes": "This is a simulation slide", "transition": "zoomIn", "transitionDuration": "1.2s"},
-        {"id": 4, "type": "api_call", "content": "https://api.github.com/users/github", "notes": "This is an API call slide", "transition": "bounceIn", "transitionDuration": "1s"},
-    ]
-    presentation_state.set_slides(default_slides)
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=True, log_output=True)
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/presentation')
+def presentation():
+    return render_template('presentation.html')
+
+@app.route('/navigation')
+def navigation():
+    presentations = list_presentations()
+    return render_template('navigation.html', presentations=presentations)
+
+@app.route('/api/presentations', methods=['GET', 'POST'])
+def api_presentations():
+    if request.method == 'GET':
+        return jsonify(list_presentations())
+    elif request.method == 'POST':
+        data = request.json
+        presentation_id = str(uuid.uuid4())
+        save_presentation(presentation_id, data)
+        return jsonify({"id": presentation_id}), 201
+
+@app.route('/api/presentations/<presentation_id>', methods=['GET', 'PUT', 'DELETE'])
+def api_presentation(presentation_id):
+    if request.method == 'GET':
+        presentation = get_presentation(presentation_id)
+        if presentation:
+            return jsonify(presentation)
+        return jsonify({"error": "Presentation not found"}), 404
+    elif request.method == 'PUT':
+        data = request.json
+        save_presentation(presentation_id, data)
+        return jsonify({"message": "Presentation updated successfully"})
+    elif request.method == 'DELETE':
+        if delete_presentation(presentation_id):
+            return jsonify({"message": "Presentation deleted successfully"})
+        return jsonify({"error": "Presentation not found"}), 404
+
+@app.route('/api/current_slide', methods=['GET', 'POST'])
+def api_current_slide():
+    global current_slide
+    if request.method == 'GET':
+        return jsonify({"current_slide": current_slide})
+    elif request.method == 'POST':
+        data = request.json
+        current_slide = data['current_slide']
+        socketio.emit('update_slide', {'slide': current_slide}, broadcast=True)
+        return jsonify({"message": "Current slide updated successfully"})
+
+@socketio.on('update_timer')
+def handle_update_timer(data):
+    global timer_seconds
+    timer_seconds = data['seconds']
+    emit('timer_update', {'seconds': timer_seconds}, broadcast=True)

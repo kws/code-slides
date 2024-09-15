@@ -1,23 +1,37 @@
 import json
 import os
 
-STORAGE_FILE = 'presentations.json'
+PRESENTATIONS_FILE = 'presentations.json'
 
-def save_presentation(name, slides):
-    presentations = load_all_presentations()
-    presentations[name] = slides
-    with open(STORAGE_FILE, 'w') as f:
-        json.dump(presentations, f)
-
-def load_presentation(name):
-    presentations = load_all_presentations()
-    return presentations.get(name)
-
-def load_all_presentations():
-    if os.path.exists(STORAGE_FILE):
-        with open(STORAGE_FILE, 'r') as f:
-            return json.load(f)
+def load_presentations():
+    if os.path.exists(PRESENTATIONS_FILE):
+        with open(PRESENTATIONS_FILE, 'r') as f:
+            data = json.load(f)
+            # Ensure the loaded data is a dictionary
+            return data if isinstance(data, dict) else {}
     return {}
 
-def get_presentation_names():
-    return list(load_all_presentations().keys())
+def save_presentations(presentations):
+    with open(PRESENTATIONS_FILE, 'w') as f:
+        json.dump(presentations, f, indent=2)
+
+def get_presentation(presentation_id):
+    presentations = load_presentations()
+    return presentations.get(presentation_id)
+
+def save_presentation(presentation_id, presentation_data):
+    presentations = load_presentations()
+    presentations[presentation_id] = presentation_data
+    save_presentations(presentations)
+
+def delete_presentation(presentation_id):
+    presentations = load_presentations()
+    if presentation_id in presentations:
+        del presentations[presentation_id]
+        save_presentations(presentations)
+        return True
+    return False
+
+def list_presentations():
+    presentations = load_presentations()
+    return [{"id": k, "title": v.get("title", "Untitled") if isinstance(v, dict) else "Untitled"} for k, v in presentations.items()]
