@@ -6,10 +6,22 @@ class Slide {
         this.type = data.type;
         this.content = data.content;
         this.notes = data.notes;
+        this.transition = data.transition || 'fadeIn';
+        this.transitionDuration = data.transitionDuration || '1s';
     }
 
     render() {
         throw new Error('Render method must be implemented');
+    }
+
+    applyTransition(element, isEntering) {
+        element.style.animationDuration = this.transitionDuration;
+        if (isEntering) {
+            element.classList.add('animate__animated', `animate__${this.transition}`);
+        } else {
+            const exitTransition = this.transition.replace('In', 'Out');
+            element.classList.add('animate__animated', `animate__${exitTransition}`);
+        }
     }
 }
 
@@ -128,7 +140,7 @@ class PresentationManager {
             }
             const slideElement = slideInstance.render();
             this.slideContainer.appendChild(slideElement);
-            this.renderedSlides.push(slideElement);
+            this.renderedSlides.push({ element: slideElement, instance: slideInstance });
         });
 
         this.showCurrentSlide();
@@ -137,22 +149,22 @@ class PresentationManager {
     showCurrentSlide() {
         console.log('Showing current slide');
         const currentIndex = this.currentState.currentSlideIndex;
-        this.renderedSlides.forEach((slide, index) => {
+        this.renderedSlides.forEach(({ element, instance }, index) => {
             if (index === currentIndex) {
                 setTimeout(() => {
-                    console.log(`Adding 'active' class to slide ${index}`);
-                    slide.classList.add('active');
-                    slide.classList.remove('previous');
+                    console.log(`Applying enter transition to slide ${index}`);
+                    instance.applyTransition(element, true);
+                    element.classList.add('active');
                 }, 50);
             } else if (index === currentIndex - 1) {
                 setTimeout(() => {
-                    console.log(`Adding 'previous' class to slide ${index}`);
-                    slide.classList.add('previous');
-                    slide.classList.remove('active');
+                    console.log(`Applying exit transition to slide ${index}`);
+                    instance.applyTransition(element, false);
+                    element.classList.remove('active');
                 }, 50);
             } else {
                 console.log(`Removing all classes from slide ${index}`);
-                slide.classList.remove('active', 'previous');
+                element.className = 'slide';
             }
         });
         console.log(`Showing slide ${currentIndex}`);
